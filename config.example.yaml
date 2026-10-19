@@ -1,0 +1,42 @@
+# Runtime values for OCIDs and the SSH public key are injected from the
+# environment on GitHub Actions. Do not put API private keys in this file.
+
+instance_name: HATCHY
+region: ap-tokyo-1
+shape: VM.Standard.A1.Flex
+ocpus: 2
+memory_in_gbs: 12
+boot_volume_size_in_gbs: 100
+boot_volume_vpus_per_gb: 10
+
+availability_domain_index: 1
+
+vcn_ocid: ${OCI_VCN_OCID}
+subnet_ocid: ${OCI_SUBNET_OCID}
+
+ssh_public_key_path: /tmp/hatchy_ssh.pub
+
+oci_config_path: ~/.oci/config
+oci_profile: DEFAULT
+
+free_tier:
+  max_a1_ocpus: 2
+  max_a1_memory_gbs: 12
+  max_storage_gbs: 200
+
+freeform_tags:
+  managed_by: hatchy-oci-a1-watcher
+  project: HATCHY
+
+poll:
+  max_attempts: 12
+  interval_seconds: 15
+
+paths:
+  state_dir: ~/.local/state/oci-a1-watcher
+  data_dir: ~/.local/share/oci-a1-watcher
+  lock_file: ~/.local/state/oci-a1-watcher/watcher.lock
+
+notify:
+  enabled: false
+  command: null

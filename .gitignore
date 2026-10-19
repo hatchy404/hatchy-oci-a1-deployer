@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+config.yaml
+.env
+*.pem
+state/
+logs/
+.result/
+.gha-state/

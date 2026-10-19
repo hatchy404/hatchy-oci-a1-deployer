@@ -1,0 +1,76 @@
+name: OCI A1 watch
+
+on:
+  schedule:
+    # GitHub의 최소 주기는 5분이다. 정각은 피한다.
+    # 각 실행 안에서는 90초마다 재시도한다.
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: dry-run은 조회만, once는 생성 1회 계열
+        type: choice
+        options:
+          - dry-run
+          - once
+        default: dry-run
+
+concurrency:
+  group: hatchy-oci-a1
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_PRIVATE_KEY_PEM: ${{ secrets.OCI_PRIVATE_KEY_PEM }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_VCN_OCID: ${{ secrets.OCI_VCN_OCID }}
+      OCI_SUBNET_OCID: ${{ secrets.OCI_SUBNET_OCID }}
+      OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+      HATCHY_LIVE: ${{ vars.HATCHY_LIVE }}
+      HATCHY_WORKFLOW: oci-a1-watch.yml
+      ATTEMPT_INTERVAL_SECONDS: "90"
+      MAX_RUN_SECONDS: "240"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Select mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.mode }}" = "once" ]; then
+              echo "arg=--once" >> "$GITHUB_OUTPUT"
+            else
+              echo "arg=--dry-run" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ "$HATCHY_LIVE" = "true" ]; then
+            echo "arg=--once" >> "$GITHUB_OUTPUT"
+          else
+            echo "arg=--dry-run" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run watcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod 700 scripts/gha_watch.sh
+          ./scripts/gha_watch.sh "${{ steps.mode.outputs.arg }}"
