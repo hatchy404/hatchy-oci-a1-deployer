@@ -339,5 +339,15 @@ def new_opc_retry_token() -> str:
     return uuid.uuid4().hex
 
 
+def stable_opc_retry_token(*parts: str) -> str:
+    """Same token for 24h so local and GitHub launches collapse into one request."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    raw = "|".join([day, *[str(part) for part in parts]])
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def is_config_error(exc: Exception) -> bool:
     return isinstance(exc, (FileNotFoundError, PermissionError, ConfigFileNotFound, InvalidConfig, KeyError, ValueError))

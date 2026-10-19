@@ -23,7 +23,7 @@ from oci_client import (
     build_launch_details,
     classify_service_error,
     load_oci_config,
-    new_opc_retry_token,
+    stable_opc_retry_token,
 )
 from preflight import load_app_config, run_preflight
 from state_manager import StateManager, expand, utc_now_iso
@@ -301,7 +301,13 @@ def run_once(app_config: dict[str, Any], *, dry_run: bool = False) -> dict[str, 
     ad_name = pre.details["availability_domain"]
     image_id = pre.details["image"]["id"]
     ssh_key = pre.details["ssh_public_key"]
-    token = new_opc_retry_token()
+    token = stable_opc_retry_token(
+        compartment_id,
+        app_config.get("instance_name", "HATCHY"),
+        app_config.get("shape", "VM.Standard.A1.Flex"),
+        str(app_config.get("ocpus", 2)),
+        str(app_config.get("memory_in_gbs", 12)),
+    )
 
     details = build_launch_details(
         availability_domain=ad_name,
