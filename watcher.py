@@ -265,16 +265,24 @@ def run_once(app_config: dict[str, Any], *, dry_run: bool = False) -> dict[str, 
                         "messages": pre.messages + [str(exc)],
                     }
 
+        if status == "WATCHING_CAPACITY":
+            retryable = True
         state_mgr.mark_attempt(
             status,
             error="; ".join(pre.messages),
             error_code=status,
             retryable=retryable,
         )
-        # Non-retryable blockers should stop the timer
+        # Capacity/transient waits keep the timer. Hard blockers stop it.
         if status.startswith("BLOCKED_") or status in {"ERROR", "PENDING_CONFIRMATION"}:
             hard_stop_timer(state_mgr, status)
-        return {"status": status, "ok": False, "messages": pre.messages, "details": _safe_details(pre.details)}
+        return {
+            "status": status,
+            "ok": False,
+            "retryable": retryable,
+            "messages": pre.messages,
+            "details": _safe_details(pre.details),
+        }
 
     if dry_run:
         state_mgr.mark_attempt(

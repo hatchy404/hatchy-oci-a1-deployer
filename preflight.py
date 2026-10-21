@@ -424,8 +424,28 @@ def run_preflight(
         result.details["service_error"] = info
         if info["category"] in {"auth", "permission"}:
             return result.fail("BLOCKED_AUTH", f"OCI API denied: {info['code']}: {info['message']}")
+        if info.get("retryable"):
+            return result.fail(
+                "WATCHING_CAPACITY",
+                f"Transient OCI preflight error: {info['code']}: {info['message']}",
+            )
         return result.fail("ERROR", f"OCI preflight failed: {info['code']}: {info['message']}")
     except Exception as exc:  # noqa: BLE001
+        msg = str(exc)
+        transient_markers = (
+            "Read timed out",
+            "ConnectTimeout",
+            "Connection reset",
+            "NameResolutionError",
+            "Temporary failure",
+            "RequestException",
+            "Max retries exceeded",
+            "SSL",
+            "handshake",
+        )
+        if any(marker in msg for marker in transient_markers):
+            logger.warning("Transient preflight failure; will retry: %s", msg)
+            return result.fail("WATCHING_CAPACITY", f"Transient preflight failure: {msg}")
         logger.exception("Unexpected preflight failure")
         return result.fail("ERROR", f"Unexpected preflight failure: {exc}")
 
